@@ -32,6 +32,15 @@ window.AXIO_CONFIG = {
      (POST /api/v1/waitlist) once the backend is live. */
   apiUrl: '',                               // e.g. 'https://api.axioadvisory.com/api/v1/waitlist'
 
+  /* "Share with a friend" row (WhatsApp / SMS / Facebook) on the success
+     screen. WhatsApp and SMS send this text verbatim — if you include an
+     optional {url} token, it's swapped for the page's own live address at
+     runtime; otherwise the message is used exactly as written (e.g. with
+     a fixed link already baked in, as below). Facebook only accepts a URL
+     to share (no custom text), so it always links to the page's own live
+     address regardless of what's written here. */
+  shareMessage: "I came across this and immediately thought of you. Sharing so you can get early access — genuinely think it's good for your financial wellbeing. Get in here: www.axioadvisory.com/early-access",
+
   /* Social channels (PRD §16 / P1): render ONLY non-empty, live URLs.
      LinkedIn is the primary channel. Leave others '' to hide them. */
   social: {
@@ -51,7 +60,9 @@ window.AXIO_CONFIG = {
     { title: 'Money compounds. <em>So does time.</em> We help you plan for both.',
       lede:  'Independent financial and strategic advice for business owners, executives, investors and families navigating consequential decisions.' },
     { title: 'No products to push. No script to follow. <em>Just your plan.</em>',
-      lede:  'Evidence-based wealth advisory built around your life, not a template.' }
+      lede:  'Evidence-based wealth advisory built around your life, not a template.' },
+    { title: 'Financial intelligence and freedom are <em>your right, not a privilege.</em>',
+      lede:  'No jargon, no assumptions — just clear guidance on the questions that actually keep people up at night.' }
   ],
 
   /* Service catalogue — canonical IDs (PRD §5.1) are the integration key.

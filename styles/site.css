@@ -461,7 +461,12 @@
     .statement em{font-style:italic; color:var(--accent-deep)}
     /* rotating hero */
     .hero-rotator{position:relative}
-    .hero-slide{opacity:0; visibility:hidden; transition:opacity .9s ease; position:absolute; inset:0; pointer-events:none}
+    /* top/left/right only (no bottom) so an inactive slide's height stays
+       intrinsic to its own content instead of stretching to fill whatever
+       height the currently-active slide has established — that stretch was
+       making every slide's offsetHeight report the active slide's height
+       instead of its own, which silently broke the JS height-sync below. */
+    .hero-slide{opacity:0; visibility:hidden; transition:opacity .9s ease; position:absolute; top:0; left:0; right:0; pointer-events:none}
     .hero-slide.is-active{opacity:1; visibility:visible; position:relative; pointer-events:auto}
     @media (prefers-reduced-motion:reduce){
       .hero-slide{transition:none}
@@ -612,6 +617,17 @@
     .success .echo .t{font-family:var(--mono); font-size:10px; letter-spacing:.5px; text-transform:uppercase;
       color:var(--accent-deep); border:1px solid var(--accent); border-radius:999px; padding:5px 11px; background:#fff}
     .success .hand{font-family:var(--hand); font-size:21px; color:var(--accent-deep); margin-top:26px}
+    .success .share-lead{
+      font-family:var(--mono); font-size:10.5px; letter-spacing:.6px; text-transform:uppercase;
+      color:var(--mid); margin:28px 0 12px; max-width:none;
+    }
+    .success .share-row{display:flex; align-items:center; justify-content:center; gap:15px}
+    .success .share-row a{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:51px; height:51px; border-radius:50%; color:var(--mid);
+      transition:background .15s, color .15s;
+    }
+    .success .share-row a:hover{background:var(--accent-deep); color:#fff}
 
     /* ── footer ── */
     .foot{

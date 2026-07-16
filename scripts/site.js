@@ -137,6 +137,21 @@
     setInterval(tick, 1000);
   }
 
+  /* ── hero rotator height sync ────────────────────────────────────────
+     Slides are absolutely positioned except the active one, so the
+     rotator's box normally sizes to whichever slide is showing — that
+     makes the countdown below jump up/down as shorter/taller slides
+     rotate in. Pin the rotator to the tallest slide's height instead,
+     so everything below it stays put regardless of copy length. */
+  function syncHeroHeight() {
+    var rot = $('heroRotator');
+    var slides = rot ? rot.querySelectorAll('.hero-slide') : [];
+    if (!slides.length) return;
+    var max = 0;
+    slides.forEach(function (s) { max = Math.max(max, s.offsetHeight); });
+    rot.style.minHeight = max + 'px';
+  }
+
   /* ── hero rotator (PRD §4.1: crossfade, pause on hover/focus, RM-safe) ─ */
   function startRotator() {
     var rot = $('heroRotator');
@@ -184,6 +199,23 @@
     Array.from(selected).forEach(function (id) {
       var t = document.createElement('span'); t.className = 't'; t.textContent = byId[id] || id; echo.appendChild(t);
     });
+
+    var pageUrl = location.href.split(/[?#]/)[0];
+    var shareText = (CFG.shareMessage || 'Join the AXIO Advisory waitlist: {url}').replace('{url}', pageUrl);
+
+    var waLink = $('share-wa');
+    if (waLink) waLink.href = 'https://wa.me/?text=' + encodeURIComponent(shareText);
+
+    var smsLink = $('share-sms');
+    if (smsLink) {
+      // iOS wants "sms:&body=", Android wants "sms:?body=" — no single URI satisfies both.
+      var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+      smsLink.href = 'sms:' + (isIOS ? '&body=' : '?body=') + encodeURIComponent(shareText);
+    }
+
+    var fbLink = $('share-fb');
+    if (fbLink) fbLink.href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(pageUrl);
+
     $('form-view').style.display = 'none';
     $('success-view').style.display = 'block';
   }
@@ -262,6 +294,15 @@
     startCountdown();
     startRotator();
     bindForm();
+
+    syncHeroHeight();
+    var resizeTimer;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(syncHeroHeight, 150);
+    });
+    // clamp()-based type can reflow once web fonts finish swapping in
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncHeroHeight);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
