@@ -621,7 +621,7 @@
       font-family:var(--mono); font-size:10.5px; letter-spacing:.6px; text-transform:uppercase;
       color:var(--mid); margin:28px 0 12px; max-width:none;
     }
-    .success .share-row{display:flex; align-items:center; justify-content:center; gap:15px}
+    .success .share-row{display:flex; align-items:center; justify-content:center; gap:28px}
     .success .share-row a{
       display:inline-flex; align-items:center; justify-content:center;
       width:51px; height:51px; border-radius:50%; color:var(--mid);
