@@ -19,11 +19,13 @@ python3 -m http.server 8137
 
 ```
 Website/
-  index.html          # markup (semantic, config-driven via data-* hooks)
+  index.html          # markup (semantic, config-driven via data-* hooks) — THE edited source
+  early-access/index.html  # generated mirror of index.html — do not edit directly, see below
   privacy.html         # privacy policy page (see "Editing content" below)
   styles/site.css      # design tokens + all styles (self-hosted @font-face)
   scripts/config.js    # ← single source of content & settings (edit this)
   scripts/site.js      # behaviour: chips, countdown, rotator, form
+  scripts/build-early-access.py  # regenerates early-access/index.html from index.html
   robots.txt           # allows crawling (indexing is gated by meta robots, not robots.txt)
   sitemap.xml           # single homepage entry
   assets/
@@ -33,6 +35,28 @@ Website/
     og-image.png         # social preview image (1200×630)
     fonts/*.woff2       # 34 self-hosted subsets: Crimson Text, IBM Plex Mono, Caveat
 ```
+
+## The `/early-access` mirror
+
+The site needs to be reachable at both `axioadvisory.com/` and
+`axioadvisory.com/early-access` (the latter is the URL used in the
+WhatsApp/SMS share message — see `shareMessage` in `scripts/config.js`).
+Both are the *same page*, so rather than hand-maintaining two copies of
+the markup, `early-access/index.html` is generated from `index.html`:
+
+```bash
+python3 scripts/build-early-access.py
+```
+
+Run this after every edit to `index.html`, before committing. The
+generated file just has its relative asset paths rewritten one level
+deeper (`assets/…` → `../assets/…`, etc.) — `styles/site.css`,
+`scripts/config.js` and `scripts/site.js` are the same shared files, so
+content/behaviour changes there apply to both automatically without
+regenerating anything. The canonical link and `og:url` in the generated
+copy deliberately still point at the root URL (not itself), so search
+engines and social platforms treat `/early-access` as a mirror of the
+homepage rather than duplicate content.
 
 ## Editing content — `scripts/config.js`
 

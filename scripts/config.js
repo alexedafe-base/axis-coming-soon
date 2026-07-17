@@ -18,10 +18,12 @@ window.AXIO_CONFIG = {
 
   /* Privacy policy (PRD P0 / D-06): must be a live HTTPS URL before launch.
      While empty, the consent copy shows plain text instead of a dead link.
-     Points at the local draft page for now — privacy.html itself still has
-     a couple of bracketed placeholders (registered address, effective date)
-     pending legal sign-off; see the note at the top of that page. */
-  privacyUrl: 'privacy.html',
+     Root-relative ('/privacy.html', not 'privacy.html') so it resolves
+     correctly from both / and /early-access/ — this file is shared by
+     both copies of the page. privacy.html itself still has a couple of
+     bracketed placeholders (registered address, effective date) pending
+     legal sign-off; see the note at the top of that page. */
+  privacyUrl: '/privacy.html',
 
   /* Consent — versioned constant (PRD §5.2 / §16). Changing the text below
      MUST also bump consentVersion so a new consent version is recorded. */
