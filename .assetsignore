@@ -1,0 +1,9 @@
+# Files here exist in the repo for development/infrastructure purposes but
+# must not be published as public static assets by Cloudflare Workers.
+.git
+.gitignore
+.assetsignore
+README.md
+wrangler.jsonc
+supabase/
+scripts/build-early-access.py

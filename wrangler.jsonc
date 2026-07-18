@@ -1,0 +1,13 @@
+{
+  // Cloudflare Workers static-assets config — this is a plain static site
+  // (no server-side code), so there's no "main" script: Wrangler just
+  // publishes everything in "assets.directory" to Cloudflare's edge.
+  //
+  // If you rename the project in the Cloudflare dashboard, update "name"
+  // here to match, or the dashboard project and this config can drift.
+  "name": "axis-coming-soon",
+  "compatibility_date": "2026-07-18",
+  "assets": {
+    "directory": "./"
+  }
+}
