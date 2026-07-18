@@ -28,6 +28,9 @@ Website/
   scripts/build-early-access.py  # regenerates early-access/index.html from index.html
   robots.txt           # allows crawling (indexing is gated by meta robots, not robots.txt)
   sitemap.xml           # single homepage entry
+  supabase/
+    schema.sql          # waitlist table + RLS policy — run once in the Supabase SQL Editor
+    functions/send-confirmation/index.ts  # Edge Function: emails a confirmation via Resend
   assets/
     favicon.svg        # AXIO mark
     favicon-32.png      # PNG fallback favicon (32×32)
@@ -137,22 +140,54 @@ What's already done:
 5. Submit `sitemap.xml` in Google Search Console / Bing Webmaster Tools once
    the domain is live and verified.
 
-## Not built here (needs external accounts + open decisions)
+## Waitlist backend (Supabase + Resend)
 
-The form runs in **static/dev mode**: it validates and shows the success state,
-persisting to `localStorage` only. The PRD names localStorage-only a **release
-blocker** — a real backend is required before public launch. To connect it, set
-`AXIO_CONFIG.apiUrl` to the waitlist Worker; the client already POSTs the correct
-JSON with an `Idempotency-Key`.
+The form runs in **static/dev mode** until `supabaseUrl`/`supabaseAnonKey`
+are set in `scripts/config.js` — until then it validates and shows the
+success state, persisting to `localStorage` only (fine for previewing the
+site, not for real signups).
 
-Still required for production (PRD §6, blocked on decisions D-01…D-08):
+**One-time setup**, all done in each provider's own dashboard — nothing
+here needs a local build step or CLI install:
 
-- **Waitlist API** (Cloudflare Worker) — validation, Turnstile, idempotency,
-  consent logging → **Supabase** (system of record).
-- **Email/CRM** (Brevo) — confirmation email, double opt-in, suppression sync.
-- Confirmed **legal entity**, live **privacy-policy URL**, **social handles**,
-  **launch date/destination**, analytics + cookie posture.
-- SPF/DKIM/DMARC, monitoring, deletion/suppression process, launch checklist (§13.1).
+1. **Create a Supabase project** at [supabase.com](https://supabase.com) (free tier is enough for a waitlist).
+2. **Run the schema**: Project → SQL Editor → New query → paste the contents of
+   [`supabase/schema.sql`](supabase/schema.sql) → Run. This creates the
+   `waitlist` table with Row Level Security locked to insert-only.
+3. **Copy your keys**: Project Settings → API → copy the **Project URL** and
+   the **`anon` `public`** key (not `service_role` — that one must never
+   go in client-side code). Paste both into `scripts/config.js`
+   (`supabaseUrl`, `supabaseAnonKey`). The anon key is safe to commit —
+   it's designed to be public; the RLS policy from step 2 is what actually
+   restricts what it can do.
+4. **Create a Resend account** at [resend.com](https://resend.com) and verify
+   `axioadvisory.com` as a sending domain (Resend gives you DNS records —
+   SPF/DKIM — to add at your registrar; sending will fail until verified).
+   Generate an API key.
+5. **Deploy the confirmation email function**: `supabase/functions/send-confirmation/index.ts`.
+   Deploying needs the [Supabase CLI](https://supabase.com/docs/guides/cli)
+   (`supabase functions deploy send-confirmation`) — a one-time install,
+   separate from anything the website itself needs.
+6. **Set the function's secrets** (Project Settings → Edge Functions → Secrets):
+   `RESEND_API_KEY` (from step 4) and `WEBHOOK_SECRET` (any random string
+   you make up — used to verify webhook calls really come from Supabase).
+7. **Wire up the trigger**: Database → Webhooks → Create a new webhook →
+   table `waitlist`, event `INSERT`, target the deployed function URL, and
+   add an HTTP header `x-webhook-secret: <the same value from step 6>`.
+
+Once all seven steps are done, a real signup: inserts a row into
+Supabase → the webhook fires → the Edge Function emails a confirmation via
+Resend. Test by submitting the form and checking Supabase's Table Editor
+for the new row, then your inbox for the email.
+
+**Later, if/when this needs to harden for scale** (per PRD §6, decisions
+D-01…D-08): swap the direct-to-Supabase insert for a Cloudflare Worker in
+front of it (bot protection via Turnstile, rate limiting, idempotency
+keys — `scripts/site.js` already has a legacy `apiUrl` code path ready for
+this), and move email/CRM to Brevo or HubSpot for suppression-list sync.
+Also still open: confirmed **legal entity**, live **privacy-policy URL**,
+**social handles**, **launch date/destination**, analytics + cookie
+posture, and a deletion/suppression process.
 
 ## Source artefacts
 
