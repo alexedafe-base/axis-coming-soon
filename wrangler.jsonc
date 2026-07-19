@@ -16,9 +16,7 @@
     {
       "binding": "DB",
       "database_name": "axio-waitlist",
-      // TODO: fill in after running `wrangler d1 create axio-waitlist`
-      // (or creating it in the dashboard) — see README "Waitlist backend".
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+      "database_id": "00cb4735-3ce9-4e0f-9ee0-fa3f4b0b5a55"
     }
   ]
 }
