@@ -30,15 +30,16 @@ window.AXIO_CONFIG = {
   consentVersion: 'waitlist-2026-07-11',
 
   /* Waitlist storage (Cloudflare D1, via worker/index.js — see README
-     "Waitlist backend"). Leave '' for static/dev mode: the form validates
-     and shows success locally only, without calling any backend — this is
-     what running the site through a plain `python3 -m http.server` does,
-     since there's no Worker present to answer the request.
+     "Waitlist backend"). A same-origin relative path, not a full URL,
+     since the API is served by the same Worker as the site itself.
 
-     In production this is a same-origin relative path, not a full URL,
-     because the API is served by the same Worker as the site itself:
-       apiUrl: '/api/waitlist' */
-  apiUrl: '',
+     Now that this is set, local preview needs `npx wrangler dev` (which
+     runs the Worker + a local D1 copy) rather than a plain
+     `python3 -m http.server` — the latter has no /api/waitlist route to
+     answer, so the form would show the "couldn't save" error, not the
+     old static/dev success-without-a-backend behaviour. Set this back to
+     '' temporarily if you want that simple no-backend preview mode. */
+  apiUrl: '/api/waitlist',
 
   /* "Share with a friend" row (WhatsApp / SMS / Facebook) on the success
      screen. WhatsApp and SMS send this text verbatim — if you include an
