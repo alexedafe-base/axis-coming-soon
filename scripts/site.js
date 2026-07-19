@@ -9,13 +9,6 @@
   /* ── small helpers ──────────────────────────────────────────────────── */
   function $(id) { return document.getElementById(id); }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
-  function uuid() {
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-      var r = (Math.random() * 16) | 0, v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  }
 
   /* ── apply configurable content to the DOM (brand, links, footer) ───── */
   function applyConfig() {
@@ -253,8 +246,8 @@
 
       var payload = buildPayload(email, fname);
 
-      // Static/dev mode: nothing configured → validate + show success locally.
-      if (!CFG.apiUrl && !(CFG.supabaseUrl && CFG.supabaseAnonKey)) {
+      // Static/dev mode: no backend configured → validate + show success locally.
+      if (!CFG.apiUrl) {
         try {
           var key = 'axio_waitlist';
           var list = JSON.parse(localStorage.getItem(key) || '[]');
@@ -269,50 +262,24 @@
       submitBtn.disabled = true;
       submitBtn.innerHTML = 'Adding you to the list…';
 
-      function onSaved()  { showSuccess(email, fname); }
-      function onFailed() {
+      // worker/index.js handles this route: writes to D1, sends the
+      // confirmation email, and returns { ok:true, duplicate:bool } — a
+      // duplicate email is treated as success, not an error.
+      fetch(CFG.apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }).then(function () {
+        showSuccess(email, fname);
+      }).catch(function () {
         submitBtn.disabled = false;
         submitBtn.innerHTML = origHtml;
         var apiErr = $('api-err');
         if (apiErr) apiErr.classList.add('show');
-      }
-
-      // Recommended path: insert straight into Supabase (see supabase/schema.sql
-      // and the README's "Waitlist backend" section for setup).
-      if (CFG.supabaseUrl && CFG.supabaseAnonKey) {
-        fetch(CFG.supabaseUrl.replace(/\/$/, '') + '/rest/v1/waitlist', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': CFG.supabaseAnonKey,
-            'Authorization': 'Bearer ' + CFG.supabaseAnonKey,
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify({
-            first_name: payload.firstName,
-            email: payload.email,
-            service_ids: payload.serviceIds,
-            consent: payload.consent,
-            client: payload.client
-          })
-        }).then(function (res) {
-          // 409 = duplicate email (unique constraint) — they're already on
-          // the list, which is success from the visitor's point of view.
-          if (!res.ok && res.status !== 409) throw new Error('HTTP ' + res.status);
-          onSaved();
-        }).catch(onFailed);
-        return;
-      }
-
-      // Advanced/legacy path: a custom API, e.g. a Cloudflare Worker (PRD §5.2).
-      fetch(CFG.apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': uuid() },
-        body: JSON.stringify(payload)
-      }).then(function (res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json().catch(function () { return {}; });
-      }).then(onSaved).catch(onFailed);
+      });
     });
   }
 

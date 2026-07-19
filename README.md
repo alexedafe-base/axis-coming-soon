@@ -28,9 +28,9 @@ Website/
   scripts/build-early-access.py  # regenerates early-access/index.html from index.html
   robots.txt           # allows crawling (indexing is gated by meta robots, not robots.txt)
   sitemap.xml           # single homepage entry
-  supabase/
-    schema.sql          # waitlist table + RLS policy — run once in the Supabase SQL Editor
-    functions/send-confirmation/index.ts  # Edge Function: emails a confirmation via Resend
+  wrangler.jsonc        # Cloudflare Worker config: main script + D1 + static assets
+  worker/index.js       # Worker request handler — POST /api/waitlist, else serves static assets
+  d1/schema.sql         # waitlist table — run once against the real D1 database
   assets/
     favicon.svg        # AXIO mark
     favicon-32.png      # PNG fallback favicon (32×32)
@@ -140,54 +140,65 @@ What's already done:
 5. Submit `sitemap.xml` in Google Search Console / Bing Webmaster Tools once
    the domain is live and verified.
 
-## Waitlist backend (Supabase + Resend)
+## Waitlist backend (Cloudflare D1 + Resend)
 
-The form runs in **static/dev mode** until `supabaseUrl`/`supabaseAnonKey`
-are set in `scripts/config.js` — until then it validates and shows the
-success state, persisting to `localStorage` only (fine for previewing the
-site, not for real signups).
+Everything runs on Cloudflare — no separate database provider. The site is
+already deployed as a Cloudflare Worker (`wrangler.jsonc`); `worker/index.js`
+adds one route, `POST /api/waitlist`, and falls through to the static files
+(`env.ASSETS`) for everything else. The waitlist table lives in **D1**
+(Cloudflare's built-in SQL database), and the confirmation email sends via
+**Resend**, both called directly from `worker/index.js` — no webhook, no
+second service to deploy.
 
-**One-time setup**, all done in each provider's own dashboard — nothing
-here needs a local build step or CLI install:
+The form runs in **static/dev mode** until `apiUrl` is set to `/api/waitlist`
+in `scripts/config.js` — until then it validates and shows the success state
+without calling any backend (e.g. when previewing via a plain
+`python3 -m http.server`, where no Worker is actually running).
 
-1. **Create a Supabase project** at [supabase.com](https://supabase.com) (free tier is enough for a waitlist).
-2. **Run the schema**: Project → SQL Editor → New query → paste the contents of
-   [`supabase/schema.sql`](supabase/schema.sql) → Run. This creates the
-   `waitlist` table with Row Level Security locked to insert-only.
-3. **Copy your keys**: Project Settings → API → copy the **Project URL** and
-   the **`anon` `public`** key (not `service_role` — that one must never
-   go in client-side code). Paste both into `scripts/config.js`
-   (`supabaseUrl`, `supabaseAnonKey`). The anon key is safe to commit —
-   it's designed to be public; the RLS policy from step 2 is what actually
-   restricts what it can do.
-4. **Create a Resend account** at [resend.com](https://resend.com) and verify
+**One-time setup:**
+
+1. **Create the D1 database**:
+   ```bash
+   npx wrangler d1 create axio-waitlist
+   ```
+   This prints a `database_id` — paste it into `wrangler.jsonc`'s
+   `d1_databases[0].database_id` (currently a `REPLACE_WITH_D1_DATABASE_ID`
+   placeholder). Can also be done in the dashboard: Workers & Pages → D1 →
+   Create database.
+2. **Run the schema against the real (remote) database**:
+   ```bash
+   npx wrangler d1 execute axio-waitlist --remote --file=d1/schema.sql
+   ```
+3. **Create a Resend account** at [resend.com](https://resend.com) and verify
    `axioadvisory.com` as a sending domain (Resend gives you DNS records —
-   SPF/DKIM — to add at your registrar; sending will fail until verified).
-   Generate an API key.
-5. **Deploy the confirmation email function**: `supabase/functions/send-confirmation/index.ts`.
-   Deploying needs the [Supabase CLI](https://supabase.com/docs/guides/cli)
-   (`supabase functions deploy send-confirmation`) — a one-time install,
-   separate from anything the website itself needs.
-6. **Set the function's secrets** (Project Settings → Edge Functions → Secrets):
-   `RESEND_API_KEY` (from step 4) and `WEBHOOK_SECRET` (any random string
-   you make up — used to verify webhook calls really come from Supabase).
-7. **Wire up the trigger**: Database → Webhooks → Create a new webhook →
-   table `waitlist`, event `INSERT`, target the deployed function URL, and
-   add an HTTP header `x-webhook-secret: <the same value from step 6>`.
+   SPF/DKIM — to add at your registrar; sending fails silently until
+   verified, per `worker/index.js`'s design — a signup is never lost just
+   because the confirmation email couldn't send). Generate an API key.
+4. **Set the Worker's secret**: Cloudflare dashboard → Workers & Pages →
+   `axis-coming-soon` → Settings → Variables and Secrets → add
+   `RESEND_API_KEY` (or `npx wrangler secret put RESEND_API_KEY` locally).
+5. **Turn it on**: set `apiUrl: '/api/waitlist'` in `scripts/config.js`,
+   commit, and let it deploy.
 
-Once all seven steps are done, a real signup: inserts a row into
-Supabase → the webhook fires → the Edge Function emails a confirmation via
-Resend. Test by submitting the form and checking Supabase's Table Editor
-for the new row, then your inbox for the email.
+Test locally before touching the real database — `npx wrangler dev` runs
+the whole thing (Worker + a local D1 file, no Cloudflare account needed for
+this part) at `localhost:8787`. Apply the schema to the *local* copy first:
+`npx wrangler d1 execute axio-waitlist --local --file=d1/schema.sql`.
+
+Once live, a real signup: POSTs to `/api/waitlist` → `worker/index.js`
+inserts the row into D1 → calls Resend for the confirmation email → returns
+success. A duplicate email (D1's `UNIQUE` constraint) is treated as success,
+not an error — resubmitting isn't a failure from the visitor's side. Check
+new rows with `npx wrangler d1 execute axio-waitlist --remote --command="SELECT * FROM waitlist"`.
 
 **Later, if/when this needs to harden for scale** (per PRD §6, decisions
-D-01…D-08): swap the direct-to-Supabase insert for a Cloudflare Worker in
-front of it (bot protection via Turnstile, rate limiting, idempotency
-keys — `scripts/site.js` already has a legacy `apiUrl` code path ready for
-this), and move email/CRM to Brevo or HubSpot for suppression-list sync.
-Also still open: confirmed **legal entity**, live **privacy-policy URL**,
-**social handles**, **launch date/destination**, analytics + cookie
-posture, and a deletion/suppression process.
+D-01…D-08): add bot protection (Turnstile) and rate limiting to
+`worker/index.js`, and move to Brevo or HubSpot for proper list
+management/suppression sync once the waitlist grows past ad-hoc emails —
+`worker/index.js` is a natural place to sync new signups into a CRM's API
+alongside the D1 insert. Also still open: confirmed **legal entity**, live
+**privacy-policy URL**, **social handles**, **launch date/destination**,
+analytics + cookie posture, and a deletion/suppression process.
 
 ## Source artefacts
 

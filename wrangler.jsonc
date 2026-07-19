@@ -1,13 +1,24 @@
 {
-  // Cloudflare Workers static-assets config — this is a plain static site
-  // (no server-side code), so there's no "main" script: Wrangler just
-  // publishes everything in "assets.directory" to Cloudflare's edge.
+  // Cloudflare Workers config. worker/index.js handles POST /api/waitlist
+  // (writing to D1 + sending the confirmation email) and delegates every
+  // other request to the static assets via the ASSETS binding.
   //
   // If you rename the project in the Cloudflare dashboard, update "name"
   // here to match, or the dashboard project and this config can drift.
   "name": "axis-coming-soon",
   "compatibility_date": "2026-07-18",
+  "main": "worker/index.js",
   "assets": {
-    "directory": "./"
-  }
+    "directory": "./",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "axio-waitlist",
+      // TODO: fill in after running `wrangler d1 create axio-waitlist`
+      // (or creating it in the dashboard) — see README "Waitlist backend".
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ]
 }

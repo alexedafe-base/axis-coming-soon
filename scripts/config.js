@@ -29,24 +29,16 @@ window.AXIO_CONFIG = {
      MUST also bump consentVersion so a new consent version is recorded. */
   consentVersion: 'waitlist-2026-07-11',
 
-  /* Waitlist storage. Leave both Supabase fields '' for static/dev mode
-     (no backend): the form validates and shows success locally only.
+  /* Waitlist storage (Cloudflare D1, via worker/index.js — see README
+     "Waitlist backend"). Leave '' for static/dev mode: the form validates
+     and shows success locally only, without calling any backend — this is
+     what running the site through a plain `python3 -m http.server` does,
+     since there's no Worker present to answer the request.
 
-     Recommended path — fill in supabaseUrl + supabaseAnonKey once you've
-     created a Supabase project and run supabase/schema.sql there (see
-     README "Waitlist backend" section). The anon key is *meant* to be
-     public/client-side — Supabase's Row Level Security (set up by that
-     schema) is what actually restricts it to insert-only, so it's safe
-     to commit here same as any other client-side config. Find both
-     values in the Supabase dashboard: Project Settings → API. */
-  supabaseUrl: '',                          // e.g. 'https://xxxxxxxxxxxx.supabase.co'
-  supabaseAnonKey: '',                      // the "anon public" key, NOT the service_role key
-
-  /* Advanced/legacy path — a custom API (e.g. Cloudflare Worker) instead
-     of talking to Supabase directly from the browser. Only used if the
-     two Supabase fields above are left empty. Leave '' unless you've
-     built your own backend. */
-  apiUrl: '',                               // e.g. 'https://api.axioadvisory.com/api/v1/waitlist'
+     In production this is a same-origin relative path, not a full URL,
+     because the API is served by the same Worker as the site itself:
+       apiUrl: '/api/waitlist' */
+  apiUrl: '',
 
   /* "Share with a friend" row (WhatsApp / SMS / Facebook) on the success
      screen. WhatsApp and SMS send this text verbatim — if you include an
