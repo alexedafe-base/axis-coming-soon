@@ -98,7 +98,11 @@ async function handleWaitlist(request, env) {
     } catch (_) {}
   }
 
-  return json({ ok: true, duplicate: isDuplicate });
+  // Response never reveals `isDuplicate` — an existing-email signal here
+  // would let anyone probe arbitrary addresses to check waitlist
+  // membership (an email-enumeration issue), and the client doesn't need
+  // it anyway: it only checks the HTTP status, not the response body.
+  return json({ ok: true });
 }
 
 async function sendConfirmationEmail(env, email, firstName, serviceIds) {

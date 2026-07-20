@@ -263,8 +263,10 @@
       submitBtn.innerHTML = 'Adding you to the list…';
 
       // worker/index.js handles this route: writes to D1, sends the
-      // confirmation email, and returns { ok:true, duplicate:bool } — a
-      // duplicate email is treated as success, not an error.
+      // confirmation email, and returns { ok:true } either way — a
+      // duplicate email is treated as success, not an error (and the
+      // response deliberately doesn't say which, to avoid letting anyone
+      // probe email addresses for waitlist membership).
       fetch(CFG.apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
