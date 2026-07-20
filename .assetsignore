@@ -4,6 +4,7 @@
 .gitignore
 .assetsignore
 README.md
+PROJECT_SUMMARY.md
 wrangler.jsonc
 worker/
 d1/
